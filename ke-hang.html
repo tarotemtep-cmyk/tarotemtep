@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kệ hàng có sẵn</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap">
+<style>
+:root{--ink:#17112a;--ink2:#221a3d;--line:#3b2f60;--moon:#f1e9d8;--mute:#b3a9c9;--gold:#f0b95a;--red:#e2553f;--jade:#5fb59a;
+--serif:"Cormorant Garamond",Georgia,serif;--sans:"Be Vietnam Pro",system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--moon);font:400 16px/1.6 var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+header{padding:44px 0 24px;text-align:center;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 50% 0,#33255e,var(--ink) 70%)}
+h1{font:700 clamp(2.2rem,6vw,3.4rem)/1.1 var(--serif);margin:0 0 8px}
+header p{margin:0 auto;color:var(--mute);max-width:520px}
+.tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:22px 0}
+input[type=search]{background:var(--ink2);border:1px solid var(--line);color:var(--moon);border-radius:999px;padding:10px 18px;font:inherit;min-width:240px;flex:1;max-width:340px}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:none;color:var(--mute);border-radius:999px;padding:6px 16px;font:500 .85rem var(--sans);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.count{color:var(--mute);font-size:.88rem;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;padding-bottom:50px}
+.card{display:flex;flex-direction:column;background:var(--ink2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pic{height:210px;display:grid;place-items:center;font:700 3.2rem var(--serif);background:linear-gradient(160deg,#5a2a6e,#1b1240);position:relative}
+.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.badge{position:absolute;top:10px;left:10px;font-size:.75rem;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--jade);color:var(--ink);z-index:1}
+.badge.out{background:var(--red);color:#fff}
+.body{padding:16px;display:flex;flex-direction:column;gap:4px;flex:1}
+.cat{font-size:.78rem;color:var(--jade)}
+h3{font:700 1.3rem/1.2 var(--serif);margin:0}
+.note{font-size:.86rem;color:var(--mute);margin:0}
+.row{margin-top:auto;padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.price{font-weight:600;color:var(--gold);font-size:1.05rem}
+.buy{border:1px solid var(--gold);background:none;color:var(--gold);border-radius:999px;padding:6px 14px;font:500 .84rem var(--sans);cursor:pointer;text-decoration:none}
+.buy:hover{background:var(--gold);color:var(--ink)}
+.buy[aria-disabled=true]{opacity:.4;pointer-events:none}
+.none{text-align:center;color:var(--mute);padding:40px 0}
+footer{border-top:1px solid var(--line);padding:24px 0;text-align:center;color:var(--mute);font-size:.88rem}
+footer a{color:var(--gold)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--gold);color:var(--ink);padding:10px 18px;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1 id="shopName"></h1>
+  <p>Các sản phẩm hiện có sẵn tại tiệm. Bấm "Nhắn mua" để hỏi hàng và chốt đơn.</p>
+</div></header>
+
+<main class="wrap">
+  <div class="tools">
+    <input type="search" id="q" placeholder="Tìm sản phẩm..." aria-label="Tìm sản phẩm">
+    <div class="chips" id="chips" role="group" aria-label="Lọc theo loại"></div>
+  </div>
+  <p class="count" id="count"></p>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer><div class="wrap" id="foot"></div></footer>
+<div id="toast" role="status"></div>
+
+<script>
+/* ===== CHỈNH Ở ĐÂY =====
+   1. Thông tin tiệm
+   2. Danh sách sản phẩm: thêm/sửa/xóa từng dòng { ... },
+      image: để "" nếu chưa có ảnh, hoặc điền đường dẫn ảnh, ví dụ "anh/tarot1.jpg"
+      stock: true = còn hàng, false = hết hàng */
+const SHOP={
+  name:"Cửa tiệm của bạn",
+  contactLink:"https://zalo.me/0900000000",   // link Zalo hoặc Messenger (m.me/tên-trang)
+  contactLabel:"Zalo 0900 000 000",
+  address:"Địa chỉ tiệm của bạn"
+};
+const PRODUCTS=[
+  {name:"Rider-Waite Cổ Điển",cat:"Tarot",price:450000,stock:true,image:"",note:"78 lá, kèm sách hướng dẫn"},
+  {name:"Tarot Vườn Đêm",cat:"Tarot",price:620000,stock:true,image:"",note:"Bản nghệ sĩ, viền vàng"},
+  {name:"Oracle Bốn Mùa",cat:"Oracle",price:380000,stock:true,image:"",note:"44 lá"},
+  {name:"Oracle Linh Thú",cat:"Oracle",price:410000,stock:false,image:"",note:"Chờ nhập lô mới"},
+  {name:"Lenormand Phố Cổ",cat:"Lenormand",price:290000,stock:true,image:"",note:"36 lá"},
+  {name:"Khăn trải bài nhung",cat:"Phụ kiện",price:180000,stock:true,image:"",note:"Kích thước 60 x 60 cm"},
+  {name:"Hộp gỗ khắc trăng",cat:"Phụ kiện",price:340000,stock:true,image:"",note:"Đựng vừa bộ 78 lá"},
+  {name:"Túi đựng bài thêu tay",cat:"Phụ kiện",price:150000,stock:true,image:"",note:"Vải lanh, có dây rút"}
+];
+/* ===== HẾT PHẦN CHỈNH ===== */
+
+const $=id=>document.getElementById(id);
+const fmt=n=>n.toLocaleString("vi-VN")+" ₫";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cats=["Tất cả",...new Set(PRODUCTS.map(p=>p.cat))];
+let cat="Tất cả";
+
+document.title="Kệ hàng | "+SHOP.name;
+$("shopName").textContent=SHOP.name;
+$("foot").innerHTML=`${esc(SHOP.address)}<br>Liên hệ: <a href="${esc(SHOP.contactLink)}" target="_blank" rel="noopener">${esc(SHOP.contactLabel)}</a><br>Giá có thể thay đổi, vui lòng nhắn tiệm để xác nhận.`;
+
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),2600)}
+
+function render(){
+  $("chips").innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===cat}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+  const q=$("q").value.trim().toLowerCase();
+  const list=PRODUCTS.map((p,i)=>({p,i})).filter(({p})=>(cat==="Tất cả"||p.cat===cat)&&(!q||(p.name+" "+p.note).toLowerCase().includes(q)));
+  $("count").textContent=list.length+" sản phẩm";
+  $("grid").innerHTML=list.length?list.map(({p,i})=>`
+  <article class="card">
+    <div class="pic"><span class="badge ${p.stock?"":"out"}">${p.stock?"Còn hàng":"Hết hàng"}</span>${p.image?`<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`:esc(p.name.charAt(0))}</div>
+    <div class="body"><span class="cat">${esc(p.cat)}</span><h3>${esc(p.name)}</h3><p class="note">${esc(p.note||"")}</p>
+      <div class="row"><span class="price">${fmt(p.price)}</span>
+      <a class="buy" href="${esc(SHOP.contactLink)}" target="_blank" rel="noopener" data-i="${i}" ${p.stock?"":'aria-disabled="true"'}>Nhắn mua</a></div></div>
+  </article>`).join(""):'<p class="none">Không tìm thấy sản phẩm phù hợp.</p>';
+}
+
+document.addEventListener("click",e=>{
+  const c=e.target.closest("[data-c]");if(c){cat=c.dataset.c;render();return}
+  const b=e.target.closest("[data-i]");
+  if(b){
+    const p=PRODUCTS[+b.dataset.i],msg="Mình muốn mua: "+p.name+" ("+fmt(p.price)+")";
+    try{navigator.clipboard.writeText(msg);toast("Đã sao chép tên sản phẩm, dán vào tin nhắn nhé")}catch(_){}
+  }
+});
+$("q").addEventListener("input",render);
+render();
+</script>
+</body>
+</html>
